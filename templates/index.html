@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OW2 Rank Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f5f5f5; font-family: sans-serif; color: #1a1a1a; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    .sub { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
+
+    .search { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .search label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+    .row { display: flex; gap: 8px; }
+    input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; font-size: 0.95rem; outline: none; }
+    input:focus { border-color: #3b82f6; }
+    button { background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #93c5fd; cursor: not-allowed; }
+    .hint { font-size: 0.78rem; color: #999; margin-top: 8px; }
+
+    .error { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 12px; color: #b91c1c; font-size: 0.9rem; }
+    .loading { color: #666; font-size: 0.9rem; padding: 8px 0; }
+
+    .card { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .phead { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-bottom: 1px solid #eee; }
+    .avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; flex-shrink: 0; }
+    .pname { font-size: 1.2rem; font-weight: 700; }
+    .ptitle { font-size: 0.82rem; color: #3b82f6; margin-top: 2px; }
+    .endorse { margin-left: auto; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 5px 10px; font-size: 0.82rem; color: #0369a1; white-space: nowrap; flex-shrink: 0; }
+
+    .section { padding: 18px 20px; }
+    .slabel { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 12px; }
+    .roles { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .role { border: 1px solid #eee; border-radius: 8px; padding: 14px; text-align: center; }
+    .role.tank    { border-top: 3px solid #f97316; }
+    .role.damage  { border-top: 3px solid #ef4444; }
+    .role.support { border-top: 3px solid #22c55e; }
+    .rname { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .role.tank    .rname { color: #f97316; }
+    .role.damage  .rname { color: #ef4444; }
+    .role.support .rname { color: #22c55e; }
+    .rdot { width: 46px; height: 46px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: white; }
+    .rimg { width: 46px; height: 46px; object-fit: contain; display: block; margin: 0 auto 8px; }
+    .rtier { font-size: 0.95rem; font-weight: 700; }
+    .rdiv { font-size: 0.78rem; color: #888; margin-top: 2px; }
+    .unranked { color: #bbb; font-size: 0.85rem; }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(110px,1fr)); gap: 8px; margin-top: 12px; }
+    .stat { background: #f9f9f9; border: 1px solid #eee; border-radius: 6px; padding: 10px; text-align: center; }
+    .sval { font-size: 1.2rem; font-weight: 700; color: #3b82f6; }
+    .slbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+    footer { text-align: center; color: #ccc; font-size: 0.78rem; margin-top: 32px; }
+    @media(max-width:480px){ .row{flex-direction:column} .roles{grid-template-columns:1fr} .phead{flex-wrap:wrap} .endorse{margin-left:0} }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>OW2 Rank Tracker</h1>
+  <p class="sub">Look up any player's competitive rank and stats</p>
+
+  <div class="search">
+    <label for="tag">BattleTag</label>
+    <div class="row">
+      <input id="tag" type="text" placeholder="PlayerName-12345" autocomplete="off" spellcheck="false" />
+      <button id="btn" onclick="search()">Search</button>
+    </div>
+    <p class="hint">Profile must be Public in OW2 → Settings → Social → Career Profile</p>
+  </div>
+
+  <div id="result"></div>
+  <footer>Powered by OverFast API</footer>
+</div>
+
+<script>
+  const COLORS = {bronze:'#cd7f32',silver:'#9e9e9e',gold:'#f5a623',platinum:'#26a69a',diamond:'#29b6f6',master:'#ab47bc',grandmaster:'#ef6c00',champion:'#e53935'};
+
+  function color(tier) {
+    if (!tier) return '#ccc';
+    const k = tier.toLowerCase();
+    return Object.entries(COLORS).find(([r]) => k.includes(r))?.[1] ?? '#ccc';
+  }
+
+  function icon(tier) {
+    if (!tier) return `<div class="rdot" style="background:#ccc">?</div>`;
+    const k = tier.toLowerCase();
+    const match = Object.keys(COLORS).find(r => k.includes(r));
+    const c = color(tier), i = tier[0].toUpperCase();
+    return match
+      ? `<img class="rimg" src="/static/${match}.png" alt="${tier}" onerror="this.outerHTML='<div class=rdot style=background:${c}>${i}</div>'">`
+      : `<div class="rdot" style="background:${c}">${i}</div>`;
+  }
+
+  function formatTime(t) {
+    if (t == null) return null;
+    const secs = typeof t === 'number' ? t : t.split(':').reduce((acc, v, i) => acc + Number(v) * [3600,60,1][i], 0);
+    return Math.round(secs / 3600) + 'h';
+  }
+
+  document.getElementById('tag').addEventListener('keydown', e => e.key==='Enter' && search());
+
+  async function search() {
+    const raw = document.getElementById('tag').value.trim();
+    if (!raw) return;
+    const btn = document.getElementById('btn');
+    const out = document.getElementById('result');
+    btn.disabled = true;
+    out.innerHTML = '<p class="loading">Loading...</p>';
+    try {
+      const res = await fetch(`/api/player/${encodeURIComponent(raw.replace('#','-'))}`);
+      const d = await res.json();
+      if (!res.ok) { out.innerHTML = `<div class="error">${d.error}</div>`; return; }
+      render(d, out);
+    } catch(e) {
+      out.innerHTML = `<div class="error">Network error: ${e.message}</div>`;
+    } finally { btn.disabled = false; }
+  }
+
+  function render(d, out) {
+    const comp = d.competitive || {};
+    const roles = [{k:'tank',l:'Tank',c:'tank'},{k:'damage',l:'Damage',c:'damage'},{k:'support',l:'Support',c:'support'}];
+
+    const cards = roles.map(({k,l,c}) => {
+      const r = comp[k];
+      const body = r?.tier
+        ? `${icon(r.tier)}<div class="rtier" style="color:${color(r.tier)}">${r.tier}</div><div class="rdiv">Division ${r.division??'—'}</div>`
+        : `<div class="unranked">Unranked</div>`;
+      return `<div class="role ${c}"><div class="rname">${l}</div>${body}</div>`;
+    }).join('');
+
+    const g = d.stats?.general;
+    const statItems = g ? [
+      ['Games Played', g.games_played], ['Games Won', g.games_won],
+      ['Win Rate', g.winrate != null ? g.winrate+'%' : null],
+      ['KDA', g.kda], ['Avg Elims', g.eliminations_avg_per_10min], ['Time Played', formatTime(g.time_played)]
+    ].filter(([,v]) => v != null) : [];
+
+    const statsHtml = statItems.length ? `
+      <div class="section" style="border-top:1px solid #eee">
+        <div class="slabel">Stats</div>
+        <div class="stats">${statItems.map(([l,v]) => `<div class="stat"><div class="sval">${v}</div><div class="slbl">${l}</div></div>`).join('')}</div>
+      </div>` : '';
+
+    out.innerHTML = `
+      <div class="card">
+        <div class="phead">
+          ${d.avatar ? `<img class="avatar" src="${d.avatar}" alt="${d.username}" onerror="this.style.display='none'">` : ''}
+          <div><div class="pname">${d.username}</div>${d.title?`<div class="ptitle">${d.title}</div>`:''}</div>
+          ${d.endorsement?.level ? `<div class="endorse"> Endorsement ${d.endorsement.level}</div>` : ''}
+        </div>
+        <div class="section">
+          <div class="slabel">Competitive Rank</div>
+          <div class="roles">${cards}</div>
+        </div>
+        ${statsHtml}
+      </div>`;
+  }
+</script>
+</body>
+</html>
