@@ -1,18 +1,38 @@
-from flask import Flask, render_template, jsonify
-import requests
+from flask import Flask, render_template, jsonify, request
+import requests, sqlite3, os
 
 app = Flask(__name__)
 API = "https://overfast-api.tekrop.fr"
 ROLES = {"tank", "damage", "support"}
 RANKS = {"bronze", "silver", "gold", "platinum", "diamond", "master", "grandmaster", "champion"}
+DB = os.path.join(os.path.dirname(__file__), "tracker.db")
+
+def get_db():
+    db = sqlite3.connect(DB)
+    db.row_factory = sqlite3.Row
+    return db
+
+def init_db():
+    with get_db() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS searches (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                tag       TEXT NOT NULL,
+                searched_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""")
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS favourites (
+                id     INTEGER PRIMARY KEY AUTOINCREMENT,
+                tag    TEXT NOT NULL UNIQUE,
+                avatar TEXT,
+                added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""")
 
 def extract_competitive(raw):
     if not raw:
         return {}
-    # Roles at top level
     if set(raw.keys()) & ROLES:
         return raw
-    # Roles nested under a platform key (pc/console)
     for v in raw.values():
         if isinstance(v, dict) and set(v.keys()) & ROLES:
             return v
@@ -55,6 +75,10 @@ def get_player(tag):
         except Exception:
             pass
 
+        # Log search to DB
+        with get_db() as db:
+            db.execute("INSERT INTO searches (tag) VALUES (?)", (tag,))
+
         return jsonify({
             "username": s.get("username", tag),
             "avatar":   s.get("avatar"),
@@ -67,6 +91,41 @@ def get_player(tag):
         return jsonify({"error": "Request timed out."}), 504
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/history")
+def get_history():
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT tag, searched_at FROM searches ORDER BY searched_at DESC LIMIT 20"
+        ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/favourites", methods=["GET"])
+def get_favourites():
+    with get_db() as db:
+        rows = db.execute("SELECT tag, avatar FROM favourites ORDER BY added_at DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/favourites", methods=["POST"])
+def add_favourite():
+    body = request.get_json()
+    tag, avatar = body.get("tag"), body.get("avatar")
+    if not tag:
+        return jsonify({"error": "No tag provided."}), 400
+    try:
+        with get_db() as db:
+            db.execute("INSERT OR IGNORE INTO favourites (tag, avatar) VALUES (?,?)", (tag, avatar))
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/favourites/<path:tag>", methods=["DELETE"])
+def remove_favourite(tag):
+    with get_db() as db:
+        db.execute("DELETE FROM favourites WHERE tag = ?", (tag,))
+    return jsonify({"ok": True})
+
+init_db()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

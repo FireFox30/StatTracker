@@ -7,32 +7,40 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #f5f5f5; font-family: sans-serif; color: #1a1a1a; }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px; }
     h1 { font-size: 1.6rem; margin-bottom: 4px; }
     .sub { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
 
     .search { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
     .search label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
     .row { display: flex; gap: 8px; }
-    input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; font-size: 0.95rem; outline: none; }
+    input { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; font-size: 0.95rem; outline: none; font-family: inherit; }
     input:focus { border-color: #3b82f6; }
-    button { background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    input::placeholder { color: #aaa; }
+    button { background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit; }
     button:hover { background: #2563eb; }
     button:disabled { background: #93c5fd; cursor: not-allowed; }
     .hint { font-size: 0.78rem; color: #999; margin-top: 8px; }
 
+    .main { display: grid; grid-template-columns: 1fr 260px; gap: 16px; align-items: start; }
+
     .error { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 12px; color: #b91c1c; font-size: 0.9rem; }
     .loading { color: #666; font-size: 0.9rem; padding: 8px 0; }
 
+    /* Player card */
     .card { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
     .phead { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-bottom: 1px solid #eee; }
-    .avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; flex-shrink: 0; }
+    .avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; flex-shrink: 0; }
     .pname { font-size: 1.2rem; font-weight: 700; }
     .ptitle { font-size: 0.82rem; color: #3b82f6; margin-top: 2px; }
-    .endorse { margin-left: auto; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 5px 10px; font-size: 0.82rem; color: #0369a1; white-space: nowrap; flex-shrink: 0; }
+    .phead-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+    .endorse { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; color: #0369a1; white-space: nowrap; }
+    .fav-btn { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; color: #666; cursor: pointer; white-space: nowrap; }
+    .fav-btn:hover { border-color: #f59e0b; color: #f59e0b; background: #fffbeb; }
+    .fav-btn.saved { border-color: #f59e0b; color: #f59e0b; background: #fffbeb; }
 
-    .section { padding: 18px 20px; }
-    .slabel { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 12px; }
+    .section { padding: 16px 20px; }
+    .slabel { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 10px; }
     .roles { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
     .role { border: 1px solid #eee; border-radius: 8px; padding: 14px; text-align: center; }
     .role.tank    { border-top: 3px solid #f97316; }
@@ -48,13 +56,33 @@
     .rdiv { font-size: 0.78rem; color: #888; margin-top: 2px; }
     .unranked { color: #bbb; font-size: 0.85rem; }
 
-    .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(110px,1fr)); gap: 8px; margin-top: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 8px; margin-top: 10px; }
     .stat { background: #f9f9f9; border: 1px solid #eee; border-radius: 6px; padding: 10px; text-align: center; }
     .sval { font-size: 1.2rem; font-weight: 700; color: #3b82f6; }
     .slbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
 
-    footer { text-align: center; color: #ccc; font-size: 0.78rem; margin-top: 32px; }
-    @media(max-width:480px){ .row{flex-direction:column} .roles{grid-template-columns:1fr} .phead{flex-wrap:wrap} .endorse{margin-left:0} }
+    /* Sidebar */
+    .sidebar { display: flex; flex-direction: column; gap: 14px; }
+    .panel { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .panel-head { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 0.85rem; font-weight: 700; }
+    .panel-body { padding: 8px 0; max-height: 260px; overflow-y: auto; }
+    .panel-empty { padding: 12px 16px; font-size: 0.82rem; color: #aaa; }
+
+    .list-item { display: flex; align-items: center; gap: 10px; padding: 7px 14px; cursor: pointer; }
+    .list-item:hover { background: #f5f5f5; }
+    .list-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #eee; flex-shrink: 0; }
+    .list-tag { font-size: 0.85rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list-time { font-size: 0.72rem; color: #aaa; flex-shrink: 0; }
+    .list-remove { font-size: 0.8rem; color: #ccc; background: none; border: none; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
+    .list-remove:hover { color: #ef4444; background: none; }
+
+    footer { text-align: center; color: #ccc; font-size: 0.78rem; margin-top: 28px; }
+
+    @media(max-width:620px) {
+      .main { grid-template-columns: 1fr; }
+      .roles { grid-template-columns: 1fr; }
+      .row { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
@@ -71,8 +99,21 @@
     <p class="hint">Profile must be Public in OW2 → Settings → Social → Career Profile</p>
   </div>
 
-  <div id="result"></div>
-  <footer>Powered by OverFast API</footer>
+  <div class="main">
+    <div id="result"></div>
+    <div class="sidebar">
+      <div class="panel">
+        <div class="panel-head">Favourites</div>
+        <div class="panel-body" id="fav-list"><p class="panel-empty">No favourites yet.</p></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">Recent Searches</div>
+        <div class="panel-body" id="history-list"><p class="panel-empty">No searches yet.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Powered by OverFast API · SQLite · School Project</footer>
 </div>
 
 <script>
@@ -86,9 +127,8 @@
 
   function icon(tier) {
     if (!tier) return `<div class="rdot" style="background:#ccc">?</div>`;
-    const k = tier.toLowerCase();
+    const k = tier.toLowerCase(), c = color(tier), i = tier[0].toUpperCase();
     const match = Object.keys(COLORS).find(r => k.includes(r));
-    const c = color(tier), i = tier[0].toUpperCase();
     return match
       ? `<img class="rimg" src="/static/${match}.png" alt="${tier}" onerror="this.outerHTML='<div class=rdot style=background:${c}>${i}</div>'">`
       : `<div class="rdot" style="background:${c}">${i}</div>`;
@@ -96,30 +136,85 @@
 
   function formatTime(t) {
     if (t == null) return null;
-    const secs = typeof t === 'number' ? t : t.split(':').reduce((acc, v, i) => acc + Number(v) * [3600,60,1][i], 0);
+    const secs = typeof t === 'number' ? t : t.split(':').reduce((acc,v,i) => acc + Number(v)*[3600,60,1][i], 0);
     return Math.round(secs / 3600) + 'h';
   }
 
-  document.getElementById('tag').addEventListener('keydown', e => e.key==='Enter' && search());
+  function timeAgo(iso) {
+    const diff = Math.floor((Date.now() - new Date(iso + 'Z')) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  document.getElementById('tag').addEventListener('keydown', e => e.key === 'Enter' && search());
+
+  // Load sidebar on page load
+  loadFavourites();
+  loadHistory();
 
   async function search() {
     const raw = document.getElementById('tag').value.trim();
     if (!raw) return;
+    const tag = raw.replace('#', '-');
     const btn = document.getElementById('btn');
     const out = document.getElementById('result');
     btn.disabled = true;
     out.innerHTML = '<p class="loading">Loading...</p>';
     try {
-      const res = await fetch(`/api/player/${encodeURIComponent(raw.replace('#','-'))}`);
+      const res = await fetch(`/api/player/${encodeURIComponent(tag)}`);
       const d = await res.json();
       if (!res.ok) { out.innerHTML = `<div class="error">${d.error}</div>`; return; }
-      render(d, out);
+      render(d, tag, out);
+      loadHistory();
     } catch(e) {
       out.innerHTML = `<div class="error">Network error: ${e.message}</div>`;
     } finally { btn.disabled = false; }
   }
 
-  function render(d, out) {
+  async function loadFavourites() {
+    const res = await fetch('/api/favourites');
+    const favs = await res.json();
+    const el = document.getElementById('fav-list');
+    if (!favs.length) { el.innerHTML = '<p class="panel-empty">No favourites yet.</p>'; return; }
+    el.innerHTML = favs.map(f => `
+      <div class="list-item" onclick="searchTag('${f.tag}')">
+        ${f.avatar ? `<img class="list-avatar" src="${f.avatar}" onerror="this.style.display='none'">` : '<div class="list-avatar"></div>'}
+        <span class="list-tag">${f.tag}</span>
+        <button class="list-remove" onclick="removeFav(event,'${f.tag}')">✕</button>
+      </div>`).join('');
+  }
+
+  async function loadHistory() {
+    const res = await fetch('/api/history');
+    const rows = await res.json();
+    const el = document.getElementById('history-list');
+    if (!rows.length) { el.innerHTML = '<p class="panel-empty">No searches yet.</p>'; return; }
+    el.innerHTML = rows.map(r => `
+      <div class="list-item" onclick="searchTag('${r.tag}')">
+        <span class="list-tag">${r.tag}</span>
+        <span class="list-time">${timeAgo(r.searched_at)}</span>
+      </div>`).join('');
+  }
+
+  async function addFav(tag, avatar) {
+    await fetch('/api/favourites', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag, avatar}) });
+    loadFavourites();
+  }
+
+  async function removeFav(e, tag) {
+    e.stopPropagation();
+    await fetch(`/api/favourites/${encodeURIComponent(tag)}`, { method:'DELETE' });
+    loadFavourites();
+  }
+
+  function searchTag(tag) {
+    document.getElementById('tag').value = tag;
+    search();
+  }
+
+  function render(d, tag, out) {
     const comp = d.competitive || {};
     const roles = [{k:'tank',l:'Tank',c:'tank'},{k:'damage',l:'Damage',c:'damage'},{k:'support',l:'Support',c:'support'}];
 
@@ -135,7 +230,8 @@
     const statItems = g ? [
       ['Games Played', g.games_played], ['Games Won', g.games_won],
       ['Win Rate', g.winrate != null ? g.winrate+'%' : null],
-      ['KDA', g.kda], ['Avg Elims', g.eliminations_avg_per_10min], ['Time Played', formatTime(g.time_played)]
+      ['KDA', g.kda], ['Avg Elims', g.eliminations_avg_per_10min],
+      ['Time Played', formatTime(g.time_played)]
     ].filter(([,v]) => v != null) : [];
 
     const statsHtml = statItems.length ? `
@@ -149,7 +245,10 @@
         <div class="phead">
           ${d.avatar ? `<img class="avatar" src="${d.avatar}" alt="${d.username}" onerror="this.style.display='none'">` : ''}
           <div><div class="pname">${d.username}</div>${d.title?`<div class="ptitle">${d.title}</div>`:''}</div>
-          ${d.endorsement?.level ? `<div class="endorse"> Endorsement ${d.endorsement.level}</div>` : ''}
+          <div class="phead-right">
+            ${d.endorsement?.level ? `<div class="endorse">⭐ Endorsement ${d.endorsement.level}</div>` : ''}
+            <button class="fav-btn" id="fav-btn" onclick="addFav('${tag}','${d.avatar||''}')">☆ Favourite</button>
+          </div>
         </div>
         <div class="section">
           <div class="slabel">Competitive Rank</div>
